@@ -4,12 +4,13 @@ use actix_web::dev::Server;
 use std::net::TcpListener;
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
+use actix_web::web::Data;
 
 pub fn run(
     listener: TcpListener,
     db_pool: PgPool
 ) -> Result<Server, std::io::Error> {
-    let db_pool = web::Data::new(db_pool);
+    let db_pool = Data::new(db_pool);
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
@@ -19,6 +20,5 @@ pub fn run(
     })
     .listen(listener)?
     .run();
-
     Ok(server)
 }

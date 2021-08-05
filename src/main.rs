@@ -1,7 +1,6 @@
 use std::net::TcpListener;
 use zero2prod::startup::run;
 use zero2prod::configuration::get_configuration;
-use sqlx::PgPool;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use sqlx::postgres::PgPoolOptions;
 
@@ -19,6 +18,7 @@ async fn main() -> std::io::Result<()> {
 
     let address = format!("{}:{}",
                           configuration.application.host, configuration.application.port);
-    let listener = TcpListener::bind(address).expect("Failed to bind the port");
-    run(listener, connection_pool)?.await
+    let listener = TcpListener::bind(address)?;
+    run(listener, connection_pool)?.await?;
+    Ok(())
 }

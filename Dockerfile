@@ -1,21 +1,11 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.53.0 as planner
-WORKDIR /app
-COPY . .
-# Compute a lock-like file for our project
-RUN cargo chef prepare  --recipe-path recipe.json
-
-FROM lukemathwalker/cargo-chef:latest-rust-1.53.0 as cacher
-WORKDIR /app
-COPY --from=planner /app/recipe.json recipe.json
-# Build our project dependencies, not our application!
-RUN cargo chef cook --release --recipe-path recipe.json
-
 FROM rust:1.53.0 AS builder
 WORKDIR /app
-COPY --from=cacher /app/target target
-COPY --from=cacher /usr/local/cargo /usr/local/cargo
-COPY . .
+RUN cargo install --locked --branch master \
+    --git https://github.com/eeff/cargo-build-deps
+COPY Cargo.toml Cargo.lock ./
+RUN cargo build-deps --release
 ENV SQLX_OFFLINE true
+COPY . .
 RUN cargo build --release --bin zero2prod
 
 FROM debian:buster-slim AS runtime
@@ -25,7 +15,7 @@ RUN apt-get update -y \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/zero2prod zero2prod
-COPY configuration configuration
 ENV APP_ENVIRONMENT production
 ENTRYPOINT ["./zero2prod"]
+COPY configuration configuration
+COPY --from=builder /app/target/release/zero2prod zero2prod
