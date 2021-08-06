@@ -14,10 +14,12 @@ async fn main() -> std::io::Result<()> {
         .connect_timeout(std::time::Duration::from_secs(2))
         .connect(&configuration.database.connection_string())
         .await
-        .expect("Failed to connect to Postgres.");
+        .expect(&*format!("Failed to connect to Postgres. {}", &configuration.database.connection_string()));
 
-    let address = format!("{}:{}",
-                          configuration.application.host, configuration.application.port);
+    let address = format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    );
     let listener = TcpListener::bind(address)?;
     run(listener, connection_pool)?.await?;
     Ok(())
