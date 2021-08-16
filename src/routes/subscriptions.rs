@@ -2,7 +2,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 use sqlx::postgres::PgQueryResult;
 
 #[derive(serde::Deserialize)]
@@ -27,10 +27,11 @@ pub async fn subscribe(
         Ok(name) => name,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    let new_subscriber = NewSubscriber {
-        email: form.0.email,
-        name
+    let email = match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(_) => return HttpResponse::BadRequest().finish(),
     };
+    let new_subscriber = NewSubscriber { email, name };
     match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish()
@@ -52,7 +53,7 @@ pub async fn insert_subscriber(
         "#
     )
         .bind(Uuid::new_v4())
-        .bind(&new_subscriber.email)
+        .bind(new_subscriber.email.as_ref())
         .bind(new_subscriber.name.as_ref())
         .bind(Utc::now())
         .execute(pool)
