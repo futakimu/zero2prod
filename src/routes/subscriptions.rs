@@ -4,12 +4,24 @@ use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
 use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 use sqlx::postgres::PgQueryResult;
+use std::convert::TryInto;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
     email: String,
     name: String,
 }
+
+impl TryInto<NewSubscriber> for FormData {
+    type Error = String;
+
+    fn try_into(self) -> Result<NewSubscriber, Self::Error> {
+        let name = SubscriberName::parse(self.name)?;
+        let email = SubscriberEmail::parse(self.email)?;
+        Ok (NewSubscriber {email, name})
+    }
+}
+
 
 #[tracing::instrument(
 name = "Adding a new subscriber",
@@ -23,15 +35,11 @@ pub async fn subscribe(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let name = match SubscriberName::parse(form.0.name) {
-        Ok(name) => name,
+    let new_subscriber = match form.0.try_into() {
+        Ok(subscriber) => subscriber,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    let email = match SubscriberEmail::parse(form.0.email) {
-        Ok(email) => email,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let new_subscriber = NewSubscriber { email, name };
+
     match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish()
