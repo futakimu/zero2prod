@@ -27,7 +27,7 @@ use crate::helpers::spawn_app;
 //     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
 //     assert_eq!(saved.name, "le guin");
 // }
-//
+
 #[actix_rt::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
@@ -41,13 +41,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
     for (invalid_body, error_message) in test_cases {
         // Act
-        let response = client
-            .post(&format!("{}/subscriptions", &app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_subscriptions(invalid_body.into()).await;
 
         // Assert
         assert_eq!(
@@ -73,13 +67,7 @@ async fn subscribe_return_a_400_when_fields_are_present_but_invalid() {
 
     for (body, description) in test_cases {
         // Act
-        let response = client
-            .post(&format!("{}/subscriptions", &app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_subscriptions(body.into()).await;
 
         // Assert
         assert_eq!(
